@@ -423,7 +423,7 @@ export default function App() {
                         onChange={(e) => setConfig({ ...config, showGrid: e.target.checked })}
                       />
                       <label htmlFor="gridToggle" className="text-sm font-medium">
-                        グリッド線を表示
+                        方眼(グリッド)を表示
                       </label>
                     </div>
                   </div>
@@ -578,7 +578,7 @@ export default function App() {
             <div className="flex-1 w-full min-h-0">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={data} margin={{ top: 20, right: 30, left: 30, bottom: 40 }}>
-                  {config.showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />}
+                  {config.showGrid && <CartesianGrid stroke="#f3f4f6" strokeWidth={1} />}
 
                   {/* X軸 */}
                   <XAxis dataKey={config.xAxisKey} height={60} tick={{ fontSize: 12, fill: '#666' }} tickMargin={10}>
