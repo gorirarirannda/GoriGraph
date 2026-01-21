@@ -6,6 +6,8 @@
 
 なおこのWEBアプリケーションはGemini3.0及びClaude Sonnet 4.5によって生成されたコードより作成されました。
 
+公開ページ : <https://gorirarirannda.github.io/GoriGraph/>
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
