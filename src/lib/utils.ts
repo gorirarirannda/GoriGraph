@@ -10,6 +10,7 @@ export interface SeriesConfig {
   dataKey: string;
   name: string;
   type: 'line' | 'bar';
+  lineType?: 'monotone' | 'linear' | 'step'; // 線の曲がり方
   yAxisId: 'left' | 'right';
   color: string;
   visible: boolean;
@@ -28,6 +29,15 @@ export interface ChartConfig {
   title: string;
   xAxisKey: string;
   showGrid: boolean;
+  // フォントサイズ設定を追加
+  style: {
+    fontSize: {
+      title: number;
+      axisLabel: number;
+      axisTick: number;
+      legend: number;
+    };
+  };
   axes: {
     left: AxisConfig;
     right: AxisConfig;

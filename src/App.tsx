@@ -1,5 +1,16 @@
-import { toPng } from 'html-to-image';
-import { Database, Download, FolderOpen, Github, LayoutGrid, MoreVertical, Save, Upload } from 'lucide-react';
+import { toPng, toSvg } from 'html-to-image';
+import {
+  Database,
+  Download,
+  FolderOpen,
+  Github,
+  Image as ImageIcon,
+  LayoutGrid,
+  MoreVertical,
+  Save,
+  Type,
+  Upload,
+} from 'lucide-react';
 import Papa from 'papaparse';
 import type React from 'react';
 import { useCallback, useRef, useState } from 'react';
@@ -34,6 +45,15 @@ export default function App() {
     title: 'Experimental Data',
     xAxisKey: '',
     showGrid: true,
+    // フォントサイズ設定の初期値
+    style: {
+      fontSize: {
+        title: 24,
+        axisLabel: 14,
+        axisTick: 12,
+        legend: 14,
+      },
+    },
     axes: {
       left: { label: 'Value', unit: '', min: '', max: '' },
       right: { label: 'Secondary', unit: '', min: '', max: '' },
@@ -88,6 +108,7 @@ export default function App() {
             dataKey: key,
             name: key,
             type: 'line',
+            lineType: 'linear',
             yAxisId: 'left',
             color: DEFAULT_COLORS[index % DEFAULT_COLORS.length],
             visible: true,
@@ -123,7 +144,12 @@ export default function App() {
         const json = JSON.parse(ev.target?.result as string);
         if (json.data && json.config) {
           setData(json.data);
-          setConfig(json.config);
+          // 既存プロジェクトにstyleが無い場合の互換性維持
+          const loadedConfig = json.config;
+          if (!loadedConfig.style) {
+            loadedConfig.style = { fontSize: { title: 24, axisLabel: 14, axisTick: 12, legend: 14 } };
+          }
+          setConfig(loadedConfig);
           setFileName(json.fileName || 'Project');
           setHeaders(Object.keys(json.data[0] || {}));
         } else {
@@ -137,17 +163,28 @@ export default function App() {
     e.target.value = '';
   };
 
-  const exportImage = useCallback(async (scale = 2) => {
+  const exportImage = useCallback(async (format: 'png' | 'svg', scale = 2) => {
     if (!graphRef.current) return;
     try {
       await new Promise((resolve) => setTimeout(resolve, 100));
-      const dataUrl = await toPng(graphRef.current, {
-        cacheBust: true,
-        pixelRatio: scale,
-        backgroundColor: '#ffffff',
-      });
+
+      let dataUrl = '';
+      let ext = '';
+
+      if (format === 'svg') {
+        dataUrl = await toSvg(graphRef.current, { cacheBust: true });
+        ext = 'svg';
+      } else {
+        dataUrl = await toPng(graphRef.current, {
+          cacheBust: true,
+          pixelRatio: scale,
+          backgroundColor: '#ffffff',
+        });
+        ext = 'png';
+      }
+
       const link = document.createElement('a');
-      link.download = `gorigraph-export-${Date.now()}.png`;
+      link.download = `gorigraph-export-${Date.now()}.${ext}`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -164,6 +201,16 @@ export default function App() {
       axes: {
         ...prev.axes,
         [axis]: { ...prev.axes[axis], [field]: value },
+      },
+    }));
+  };
+
+  const updateFontSize = (key: keyof ChartConfig['style']['fontSize'], value: number) => {
+    setConfig((prev) => ({
+      ...prev,
+      style: {
+        ...prev.style,
+        fontSize: { ...prev.style.fontSize, [key]: value },
       },
     }));
   };
@@ -219,57 +266,188 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-gray-50 overflow-auto lg:overflow-hidden">
-      {/* Header - PC時のみ表示 */}
-      <header className="hidden lg:flex h-14 border-b border-border items-center justify-between px-4 bg-white shrink-0 z-20 w-full absolute top-0 left-0">
+    <div className="flex flex-col min-h-screen lg:h-screen bg-gray-50">
+      {/* Header - モバイル・PC共通 */}
+      <header className="h-14 border-b border-border items-center justify-between px-4 bg-white shrink-0 z-20 w-full flex lg:absolute lg:top-0 lg:left-0">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-white font-bold">G</div>
-          <span className="font-semibold hidden sm:inline-block">GoriGraph</span>
-          <span className="text-muted-foreground text-sm border-l pl-2 ml-2 truncate max-w-50">{fileName}</span>
+          <span className="font-semibold">GoriGraph</span>
+          <span className="text-muted-foreground text-sm border-l pl-2 ml-2 truncate max-w-32 lg:max-w-50">
+            {fileName}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-            <Upload size={14} className="mr-2" /> 新規CSV
+            <Upload size={14} className="mr-0 lg:mr-2" /> <span className="hidden lg:inline">新規CSV</span>
           </Button>
           <Button variant="outline" size="sm" onClick={saveProject}>
-            <Save size={14} className="mr-2" /> プロジェクト保存
+            <Save size={14} className="mr-0 lg:mr-2" /> <span className="hidden lg:inline">プロジェクト保存</span>
           </Button>
-          <div className="h-4 w-px bg-border mx-1" />
-          <Button size="sm" onClick={() => exportImage(3)}>
-            <Download size={14} className="mr-2" /> 画像出力 (高解像度)
+          <div className="h-4 w-px bg-border mx-1 hidden lg:block" />
+          <Button variant="ghost" size="sm" onClick={() => exportImage('png', 1)} title="軽量サイズ (1x)">
+            <ImageIcon size={14} className="mr-1" /> PNG(軽)
+          </Button>
+          <Button size="sm" onClick={() => exportImage('png', 3)} title="高解像度 (3x)">
+            <Download size={14} className="mr-2" /> PNG(高)
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportImage('svg')} title="ベクター形式">
+            <span className="text-xs font-bold mr-1">SVG</span> 出力
           </Button>
         </div>
         <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleCsvUpload} />
       </header>
 
-      <div className="flex-1 flex overflow-hidden lg:mt-14">
-        {/* Sidebar: Controls */}
-        <aside className="w-full lg:w-80 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col flex-none order-2 lg:order-first">
-          {/* モバイル用ヘッダー (PCでは非表示) */}
-          <div className="p-4 border-b border-gray-200 lg:hidden">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-white font-bold">
-                G
+      <div className="flex-1 flex flex-col lg:flex-row overflow-auto lg:overflow-hidden lg:mt-14">
+        {/* Main: Preview Area */}
+        <main className="flex-1 flex flex-col min-w-0 order-1 lg:order-2 bg-gray-50/50">
+          <div className="p-2 lg:p-8 flex items-center justify-center lg:flex-1 lg:overflow-y-auto">
+            <div
+              className="bg-white shadow-xl rounded-xl p-2 lg:p-8 w-full max-w-5xl aspect-[1.414/1] relative flex flex-col"
+              ref={graphRef}
+              style={{
+                fontFamily: fontType === 'serif' ? '"Noto Serif JP", serif' : '"Noto Sans JP", sans-serif',
+              }}
+            >
+              {/* グラフタイトル (フォントサイズ適用) */}
+              <input
+                className="text-center w-full mb-4 outline-none hover:bg-gray-50 focus:bg-gray-50 rounded font-bold"
+                style={{ fontSize: config.style.fontSize.title }}
+                value={config.title}
+                onChange={(e) => setConfig({ ...config, title: e.target.value })}
+                placeholder="グラフタイトル"
+              />
+
+              <div className="flex-1 w-full min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    data={data}
+                    margin={{
+                      top: window.innerWidth < 1024 ? 10 : 20,
+                      right: window.innerWidth < 1024 ? 15 : 30,
+                      left: window.innerWidth < 1024 ? 15 : 30,
+                      bottom: window.innerWidth < 1024 ? 20 : 40,
+                    }}
+                  >
+                    {config.showGrid && <CartesianGrid stroke="#f3f4f6" strokeWidth={1} />}
+
+                    {/* X軸 (フォントサイズ適用) */}
+                    <XAxis
+                      dataKey={config.xAxisKey}
+                      height={60}
+                      tick={{ fontSize: config.style.fontSize.axisTick, fill: '#666' }}
+                      tickMargin={10}
+                    >
+                      <RechartsLabel
+                        value={`${config.axes.bottom.label} ${config.axes.bottom.unit ? `[${config.axes.bottom.unit}]` : ''}`}
+                        position="insideBottom"
+                        offset={0}
+                        style={{
+                          textAnchor: 'middle',
+                          fontSize: config.style.fontSize.axisLabel,
+                          fontWeight: 500,
+                          fill: '#333',
+                        }}
+                      />
+                    </XAxis>
+
+                    {/* 左Y軸 (フォントサイズ適用) */}
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fontSize: config.style.fontSize.axisTick, fill: '#666' }}
+                      domain={[
+                        config.axes.left.min !== '' ? config.axes.left.min : 'auto',
+                        config.axes.left.max !== '' ? config.axes.left.max : 'auto',
+                      ]}
+                    >
+                      <RechartsLabel
+                        value={`${config.axes.left.label} ${config.axes.left.unit ? `[${config.axes.left.unit}]` : ''}`}
+                        angle={-90}
+                        position="insideLeft"
+                        style={{
+                          textAnchor: 'middle',
+                          fontSize: config.style.fontSize.axisLabel,
+                          fontWeight: 500,
+                          fill: config.series.some((s) => s.yAxisId === 'left') ? '#2563eb' : '#333',
+                        }}
+                      />
+                    </YAxis>
+
+                    {/* 右Y軸 (フォントサイズ適用) */}
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fontSize: config.style.fontSize.axisTick, fill: '#666' }}
+                      domain={[
+                        config.axes.right.min !== '' ? config.axes.right.min : 'auto',
+                        config.axes.right.max !== '' ? config.axes.right.max : 'auto',
+                      ]}
+                    >
+                      <RechartsLabel
+                        value={`${config.axes.right.label} ${config.axes.right.unit ? `[${config.axes.right.unit}]` : ''}`}
+                        angle={90}
+                        position="insideRight"
+                        style={{
+                          textAnchor: 'middle',
+                          fontSize: config.style.fontSize.axisLabel,
+                          fontWeight: 500,
+                          fill: config.series.some((s) => s.yAxisId === 'right') ? '#d97706' : '#333',
+                        }}
+                      />
+                    </YAxis>
+
+                    <Tooltip
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    />
+                    <Legend
+                      verticalAlign="top"
+                      height={36}
+                      iconType="circle"
+                      wrapperStyle={{ fontSize: config.style.fontSize.legend }}
+                    />
+
+                    {config.series
+                      .filter((s) => s.visible)
+                      .map((s) => {
+                        if (s.type === 'bar') {
+                          return (
+                            <Bar
+                              key={s.id}
+                              dataKey={s.dataKey}
+                              name={s.name}
+                              yAxisId={s.yAxisId}
+                              fill={s.color}
+                              barSize={30}
+                              radius={[4, 4, 0, 0]}
+                            />
+                          );
+                        }
+                        return (
+                          <Line
+                            key={s.id}
+                            type={s.lineType || 'linear'}
+                            dataKey={s.dataKey}
+                            name={s.name}
+                            yAxisId={s.yAxisId}
+                            stroke={s.color}
+                            strokeWidth={s.strokeWidth}
+                            dot={s.showDot ? { r: 4, fill: s.color, strokeWidth: 0 } : false}
+                            activeDot={{ r: 6 }}
+                          />
+                        );
+                      })}
+                  </ComposedChart>
+                </ResponsiveContainer>
               </div>
-              <span className="font-semibold">GoriGraph</span>
-              <span className="text-muted-foreground text-sm border-l pl-2 ml-2 truncate">{fileName}</span>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => fileInputRef.current?.click()}>
-                <Upload size={14} className="mr-2" /> CSV
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1" onClick={saveProject}>
-                <Save size={14} className="mr-2" /> 保存
-              </Button>
-              <Button size="sm" className="flex-1" onClick={() => exportImage(3)}>
-                <Download size={14} className="mr-2" /> 出力
-              </Button>
+              <div className="absolute bottom-1 right-2 lg:bottom-2 lg:right-4 text-[10px] lg:text-xs text-gray-300 pointer-events-none">
+                Generated by GoriGraph
+              </div>
             </div>
           </div>
+        </main>
 
-          {/* ★タブ切り替えUIは削除しました */}
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-8">
+        {/* Sidebar: Controls */}
+        <aside className="w-full lg:w-80 bg-white border-t lg:border-t-0 lg:border-r border-gray-200 flex flex-col flex-none order-2 lg:order-1 z-10">
+          <div className="lg:flex-1 lg:overflow-y-auto p-4 space-y-8">
             {/* 軸設定セクション */}
             <section className="space-y-4">
               <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
@@ -421,28 +599,64 @@ export default function App() {
 
             <hr className="border-border" />
 
-            {/* フォント切り替え */}
-            <section className="space-y-3">
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">フォントタイプ</div>
+            {/* フォント設定 */}
+            <section className="space-y-4">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                <Type size={14} /> フォント設定
+              </h3>
+
+              {/* フォント種類 */}
               <div className="flex bg-gray-100 p-1 rounded-lg">
                 <button
                   type="button"
                   onClick={() => setFontType('sans')}
-                  className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${
-                    fontType === 'sans' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
-                  }`}
+                  className={`flex-1 py-1 text-xs font-medium rounded ${fontType === 'sans' ? 'bg-white shadow' : 'text-gray-500'}`}
                 >
                   ゴシック
                 </button>
                 <button
                   type="button"
                   onClick={() => setFontType('serif')}
-                  className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${
-                    fontType === 'serif' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
-                  }`}
+                  className={`flex-1 py-1 text-xs font-medium rounded ${fontType === 'serif' ? 'bg-white shadow' : 'text-gray-500'}`}
                 >
                   明朝体
                 </button>
+              </div>
+
+              {/* フォントサイズ調整 */}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <Label>タイトル</Label>
+                  <Input
+                    type="number"
+                    value={config.style.fontSize.title}
+                    onChange={(e) => updateFontSize('title', Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>凡例 (Legend)</Label>
+                  <Input
+                    type="number"
+                    value={config.style.fontSize.legend}
+                    onChange={(e) => updateFontSize('legend', Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>軸ラベル</Label>
+                  <Input
+                    type="number"
+                    value={config.style.fontSize.axisLabel}
+                    onChange={(e) => updateFontSize('axisLabel', Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>軸目盛り</Label>
+                  <Input
+                    type="number"
+                    value={config.style.fontSize.axisTick}
+                    onChange={(e) => updateFontSize('axisTick', Number(e.target.value))}
+                  />
+                </div>
               </div>
             </section>
 
@@ -521,6 +735,17 @@ export default function App() {
                     </div>
                     {series.type === 'line' && (
                       <>
+                        <div className="col-span-2">
+                          <Label>線の形状</Label>
+                          <NativeSelect
+                            value={series.lineType || 'linear'}
+                            onChange={(e) => updateSeries(idx, { lineType: e.target.value as any })}
+                          >
+                            <option value="linear">直線 (Linear)</option>
+                            <option value="monotone">滑らか (Smooth)</option>
+                            <option value="step">階段状 (Step)</option>
+                          </NativeSelect>
+                        </div>
                         <div>
                           <Label>線の太さ</Label>
                           <NativeSelect
@@ -533,7 +758,7 @@ export default function App() {
                             <option value="4">極太 (4px)</option>
                           </NativeSelect>
                         </div>
-                        <div className="col-span-2 flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-4">
                           <input
                             type="checkbox"
                             id={`dot-${series.id}`}
@@ -552,129 +777,6 @@ export default function App() {
             </section>
           </div>
         </aside>
-
-        {/* Main: Preview Area */}
-        <main className="flex-1 flex flex-col min-w-0 min-h-[50vh] lg:min-h-auto order-1 bg-gray-50/50 overflow-auto">
-          <div className="flex-1 p-4 lg:p-8 flex items-center justify-center">
-            <div
-              className="bg-white shadow-2xl rounded-xl p-8 w-full max-w-5xl aspect-[1.414/1] relative flex flex-col"
-              ref={graphRef}
-              style={{
-                fontFamily: fontType === 'serif' ? '"Noto Serif JP", serif' : '"Noto Sans JP", sans-serif',
-              }}
-            >
-              {/* グラフタイトル */}
-              <input
-                className="text-2xl font-bold text-center w-full mb-4 outline-none hover:bg-gray-50 focus:bg-gray-50 rounded"
-                value={config.title}
-                onChange={(e) => setConfig({ ...config, title: e.target.value })}
-                placeholder="グラフタイトル"
-              />
-
-              <div className="flex-1 w-full min-h-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={data} margin={{ top: 20, right: 30, left: 30, bottom: 40 }}>
-                    {config.showGrid && <CartesianGrid stroke="#f3f4f6" strokeWidth={1} />}
-
-                    {/* X軸 */}
-                    <XAxis dataKey={config.xAxisKey} height={60} tick={{ fontSize: 12, fill: '#666' }} tickMargin={10}>
-                      <RechartsLabel
-                        value={`${config.axes.bottom.label} ${config.axes.bottom.unit ? `[${config.axes.bottom.unit}]` : ''}`}
-                        position="insideBottom"
-                        offset={0}
-                        style={{ textAnchor: 'middle', fontSize: 14, fontWeight: 500, fill: '#333' }}
-                      />
-                    </XAxis>
-
-                    {/* 左Y軸 */}
-                    <YAxis
-                      yAxisId="left"
-                      tick={{ fontSize: 12, fill: '#666' }}
-                      domain={[
-                        config.axes.left.min !== '' ? config.axes.left.min : 'auto',
-                        config.axes.left.max !== '' ? config.axes.left.max : 'auto',
-                      ]}
-                    >
-                      <RechartsLabel
-                        value={`${config.axes.left.label} ${config.axes.left.unit ? `[${config.axes.left.unit}]` : ''}`}
-                        angle={-90}
-                        position="insideLeft"
-                        style={{
-                          textAnchor: 'middle',
-                          fontSize: 14,
-                          fontWeight: 500,
-                          fill: config.series.some((s) => s.yAxisId === 'left') ? '#2563eb' : '#333',
-                        }}
-                      />
-                    </YAxis>
-
-                    {/* 右Y軸 */}
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      tick={{ fontSize: 12, fill: '#666' }}
-                      domain={[
-                        config.axes.right.min !== '' ? config.axes.right.min : 'auto',
-                        config.axes.right.max !== '' ? config.axes.right.max : 'auto',
-                      ]}
-                    >
-                      <RechartsLabel
-                        value={`${config.axes.right.label} ${config.axes.right.unit ? `[${config.axes.right.unit}]` : ''}`}
-                        angle={90}
-                        position="insideRight"
-                        style={{
-                          textAnchor: 'middle',
-                          fontSize: 14,
-                          fontWeight: 500,
-                          fill: config.series.some((s) => s.yAxisId === 'right') ? '#d97706' : '#333',
-                        }}
-                      />
-                    </YAxis>
-
-                    <Tooltip
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                    />
-                    <Legend verticalAlign="top" height={36} iconType="circle" />
-
-                    {config.series
-                      .filter((s) => s.visible)
-                      .map((s) => {
-                        if (s.type === 'bar') {
-                          return (
-                            <Bar
-                              key={s.id}
-                              dataKey={s.dataKey}
-                              name={s.name}
-                              yAxisId={s.yAxisId}
-                              fill={s.color}
-                              barSize={30}
-                              radius={[4, 4, 0, 0]}
-                            />
-                          );
-                        }
-                        return (
-                          <Line
-                            key={s.id}
-                            type="monotone"
-                            dataKey={s.dataKey}
-                            name={s.name}
-                            yAxisId={s.yAxisId}
-                            stroke={s.color}
-                            strokeWidth={s.strokeWidth}
-                            dot={s.showDot ? { r: 4, fill: s.color, strokeWidth: 0 } : false}
-                            activeDot={{ r: 6 }}
-                          />
-                        );
-                      })}
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="absolute bottom-2 right-4 text-xs text-gray-300 pointer-events-none">
-                Generated by GoriGraph
-              </div>
-            </div>
-          </div>
-        </main>
       </div>
 
       {/* データ編集モーダル */}
@@ -684,6 +786,7 @@ export default function App() {
         data={data}
         setData={setData}
         headers={headers}
+        setHeaders={setHeaders}
       />
     </div>
   );
