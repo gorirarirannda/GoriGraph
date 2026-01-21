@@ -4,7 +4,7 @@
 
 サーバーサイド処理を行わず、すべてのデータ処理をブラウザ上で完結させるため、機密性の高い実験データでも安心して利用できます。
 
-なおこのWEBアプリケーションはGemini3.0及びClaude Sonnet 4.5を使用して作成されました。
+なおこのWEBアプリケーションはGemini3.0及びClaude Sonnet 4.5によって生成されたコードより作成されました。
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18-blue)
