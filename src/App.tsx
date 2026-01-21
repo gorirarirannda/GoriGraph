@@ -84,6 +84,61 @@ function DataEditorModal({ isOpen, onClose, data, headers }: DataEditorModalProp
   );
 }
 
+// --- データ編集モーダルコンポーネント ---
+interface DataEditorModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  data: any[];
+  headers: string[];
+}
+
+function DataEditorModal({ isOpen, onClose, data, headers }: DataEditorModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col">
+        <div className="p-4 border-b flex items-center justify-between">
+          <h2 className="text-xl font-bold">データ編集・確認</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
+          >
+            閉じる
+          </button>
+        </div>
+        <div className="p-4 overflow-auto flex-1">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="bg-gray-100">
+                  {headers.map((header) => (
+                    <th key={header} className="border border-gray-300 px-2 py-1 font-semibold">
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((row, rowIdx) => (
+                  <tr key={`row-${rowIdx}-${JSON.stringify(row)}`} className="hover:bg-gray-50">
+                    {headers.map((header) => (
+                      <td key={header} className="border border-gray-300 px-2 py-1">
+                        {row[header]}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- 初期定数 ---
 const DEFAULT_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#db2777'];
 
