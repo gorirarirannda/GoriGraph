@@ -6,6 +6,7 @@ import {
   Github,
   Image as ImageIcon,
   LayoutGrid,
+  Loader2,
   MoreVertical,
   Save,
   Type,
@@ -38,6 +39,9 @@ export default function App() {
   const [data, setData] = useState<any[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [fileName, setFileName] = useState<string>('');
+
+  // ★追加: エクスポート中の状態管理
+  const [isExporting, setIsExporting] = useState(false);
 
   // ★タブ管理のStateは不要になったので削除しました
 
@@ -163,35 +167,45 @@ export default function App() {
     e.target.value = '';
   };
 
-  const exportImage = useCallback(async (format: 'png' | 'svg', scale = 2) => {
-    if (!graphRef.current) return;
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+  // ★修正: 画像エクスポート処理 (軽量化 & UX改善)
+  const exportImage = useCallback(
+    async (format: 'png' | 'svg', scale = 2) => {
+      if (!graphRef.current || isExporting) return; // 連打防止
 
-      let dataUrl = '';
-      let ext = '';
+      try {
+        setIsExporting(true); // ローディング開始
 
-      if (format === 'svg') {
-        dataUrl = await toSvg(graphRef.current, { cacheBust: true });
-        ext = 'svg';
-      } else {
-        dataUrl = await toPng(graphRef.current, {
-          cacheBust: true,
-          pixelRatio: scale,
-          backgroundColor: '#ffffff',
-        });
-        ext = 'png';
+        // UIレンダリング(ローディングアイコン表示)のために一瞬待機
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        let dataUrl = '';
+        let ext = '';
+
+        if (format === 'svg') {
+          dataUrl = await toSvg(graphRef.current); // cacheBust削除
+          ext = 'svg';
+        } else {
+          dataUrl = await toPng(graphRef.current, {
+            pixelRatio: scale,
+            backgroundColor: '#ffffff',
+            // cacheBust: true を削除 (ここがラグの原因でした)
+          });
+          ext = 'png';
+        }
+
+        const link = document.createElement('a');
+        link.download = `gorigraph-export-${Date.now()}.${ext}`;
+        link.href = dataUrl;
+        link.click();
+      } catch (err) {
+        console.error(err);
+        alert('画像生成に失敗しました。');
+      } finally {
+        setIsExporting(false); // 処理完了
       }
-
-      const link = document.createElement('a');
-      link.download = `gorigraph-export-${Date.now()}.${ext}`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) {
-      console.error(err);
-      alert('画像生成に失敗しました。');
-    }
-  }, []);
+    },
+    [isExporting],
+  );
 
   // --- Handlers: Configuration ---
 
@@ -313,16 +327,64 @@ export default function App() {
           <Button variant="outline" size="sm" onClick={saveProject}>
             <Save size={14} className="mr-0 lg:mr-2" /> <span className="hidden lg:inline">プロジェクト保存</span>
           </Button>
+
+          {/* ...保存ボタンの後... */}
           <div className="h-4 w-px bg-border mx-1 hidden lg:block" />
-          <Button variant="ghost" size="sm" onClick={() => exportImage('png', 1)} title="軽量サイズ (1x)">
-            <ImageIcon size={14} className="mr-1" /> PNG(軽)
-          </Button>
-          <Button size="sm" onClick={() => exportImage('png', 3)} title="高解像度 (3x)">
-            <Download size={14} className="mr-2" /> PNG(高)
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => exportImage('svg')} title="ベクター形式">
-            <span className="text-xs font-bold mr-1">SVG</span> 出力
-          </Button>
+
+          {/* Desktop: 詳細ボタン */}
+          <div className="hidden lg:flex items-center gap-2">
+            {/* PNG(軽) */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => exportImage('png', 1)}
+              disabled={isExporting}
+              title="軽量サイズ (1x)"
+            >
+              {isExporting ? (
+                <Loader2 size={14} className="mr-1 animate-spin" />
+              ) : (
+                <ImageIcon size={14} className="mr-1" />
+              )}
+              PNG(軽)
+            </Button>
+
+            {/* PNG(高) */}
+            <Button size="sm" onClick={() => exportImage('png', 3)} disabled={isExporting} title="高解像度 (3x)">
+              {isExporting ? (
+                <Loader2 size={14} className="mr-2 animate-spin" />
+              ) : (
+                <Download size={14} className="mr-2" />
+              )}
+              PNG(高)
+            </Button>
+
+            {/* SVG */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportImage('svg')}
+              disabled={isExporting}
+              title="ベクター形式"
+            >
+              {isExporting ? (
+                <Loader2 size={14} className="mr-1 animate-spin" />
+              ) : (
+                <span className="text-xs font-bold mr-1">SVG</span>
+              )}
+              出力
+            </Button>
+          </div>
+
+          {/* Mobile Header 内のボタンエリア */}
+          <div className="flex gap-2 overflow-x-auto pb-2 lg:hidden">
+            <Button size="sm" onClick={() => exportImage('png', 1)} disabled={isExporting}>
+              {isExporting ? <Loader2 size={14} className="animate-spin" /> : 'PNG'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => exportImage('svg')} disabled={isExporting}>
+              {isExporting ? <Loader2 size={14} className="animate-spin" /> : 'SVG'}
+            </Button>
+          </div>
         </div>
         <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleCsvUpload} />
       </header>
