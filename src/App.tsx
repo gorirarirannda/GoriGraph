@@ -1,5 +1,5 @@
 import { toPng } from 'html-to-image';
-import { Download, FileSpreadsheet, FolderOpen, LayoutGrid, MoreVertical, Save, Settings, Upload } from 'lucide-react';
+import { Download, FileSpreadsheet, FolderOpen, Github, LayoutGrid, MoreVertical, Save, Settings, Upload } from 'lucide-react';
 import Papa from 'papaparse';
 import type React from 'react';
 import { useCallback, useRef, useState } from 'react';
@@ -210,6 +210,15 @@ export default function App() {
             <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleCsvUpload} />
             <input type="file" accept=".json" ref={projectInputRef} className="hidden" onChange={loadProject} />
           </div>
+          <a 
+            href="https://github.com/gorirarirannda/GoriGraph" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors pt-4"
+          >
+            <Github size={18} />
+            <span>View on GitHub</span>
+          </a>
         </Card>
       </div>
     );
