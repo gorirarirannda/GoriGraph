@@ -54,5 +54,7 @@
 
 このプロジェクトは [MIT License](https://www.google.com/search?q=LICENSE) の下で公開されています。
 
+## 📸 スクリーンショット
+
 ![App Screenshot](./docs/screenshot_title.png)
 ![Making Graph](./docs/screenshot_graph.png)
