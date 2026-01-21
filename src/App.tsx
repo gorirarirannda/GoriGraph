@@ -536,7 +536,10 @@ export default function App() {
                   </thead>
                   <tbody>
                     {data.map((row, rIdx) => (
-                      <tr key={`row-${rIdx}-${JSON.stringify(row)}`} className="border-b border-border last:border-0 hover:bg-blue-50/50">
+                      <tr
+                        key={`row-${rIdx}-${JSON.stringify(row)}`}
+                        className="border-b border-border last:border-0 hover:bg-blue-50/50"
+                      >
                         {headers.map((col) => (
                           <td key={`${rIdx}-${col}`} className="border-r border-border last:border-r-0 p-0">
                             <input
