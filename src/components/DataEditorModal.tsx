@@ -9,6 +9,7 @@ interface DataEditorModalProps {
   setData: (data: any[]) => void;
   headers: string[];
   setHeaders: (headers: string[]) => void;
+  onColumnAdd?: (columnName: string) => void;
 }
 
 export const DataEditorModal: React.FC<DataEditorModalProps> = ({
@@ -18,6 +19,7 @@ export const DataEditorModal: React.FC<DataEditorModalProps> = ({
   setData,
   headers,
   setHeaders,
+  onColumnAdd,
 }) => {
   const [editingHeader, setEditingHeader] = useState<string | null>(null);
   const [tempHeaderName, setTempHeaderName] = useState('');
@@ -59,6 +61,8 @@ export const DataEditorModal: React.FC<DataEditorModalProps> = ({
       // 全行に初期値を追加
       const newData = data.map((row) => ({ ...row, _id: row._id || Date.now().toString() + Math.random(), [name]: 0 }));
       setData(newData);
+      // 列追加を親コンポーネントに通知（データ系列追加のため）
+      onColumnAdd?.(name);
     } else if (headers.includes(name || '')) {
       alert('その列名は既に存在します');
     }
