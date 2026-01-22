@@ -284,7 +284,7 @@ export default function App() {
             <input type="file" accept=".json" ref={projectInputRef} className="hidden" onChange={loadProject} />
           </div>
           <a
-            href="https://github.com/your-username/GoriGraph"
+            href="https://github.com/gorirarirannda/GoriGraph"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors pt-4"
