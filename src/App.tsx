@@ -32,6 +32,8 @@ import { Button, Card, Input, Label, NativeSelect } from './components/ui/common
 import type { AxisConfig, ChartConfig, SeriesConfig } from './lib/utils';
 
 // --- 初期定数 ---
+const APP_VERSION = 'v1.1.0'; // リリース時に更新してからリリース
+
 const DEFAULT_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#db2777'];
 
 export default function App() {
@@ -266,7 +268,12 @@ export default function App() {
             <LayoutGrid size={40} />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">GoriGraph</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+              GoriGraph
+              <span className="text-xs font-mono font-normal text-gray-500 bg-gray-100 border border-gray-200 px-2 py-1 rounded-full">
+                {APP_VERSION}
+              </span>
+              </h1>
             <p className="text-muted-foreground mt-2">
               GitHub Pages対応・完全クライアントサイド。
               <br />
