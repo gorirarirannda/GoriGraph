@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint src --ext .ts,.tsx",
-    "lint:fix": "eslint src --ext .ts,.tsx --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
+    "lint": "biome lint src",
+    "lint:fix": "biome lint --write src",
+    "format": "biome format --write src",
+    "check": "biome check src",
+    "check:fix": "biome check --write src",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -16,20 +18,21 @@
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.562.0",
     "papaparse": "^5.5.3",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "recharts": "^3.6.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "recharts": "^3.7.0",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
-    "@types/node": "^24.10.1",
+    "@types/node": "^24.10.9",
     "@types/papaparse": "^5.5.2",
-    "@types/react": "^19.2.5",
+    "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
-    "@vitejs/plugin-react": "^5.1.1",
+    "@vitejs/plugin-react": "^5.1.2",
+    "biome": "^0.3.3",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
@@ -40,6 +43,6 @@
     "svelte-eslint-parser": "^1.4.1",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
-    "vite": "^7.2.4"
+    "vite": "^7.3.1"
   }
 }
