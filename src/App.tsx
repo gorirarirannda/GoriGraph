@@ -69,6 +69,7 @@ export default function App() {
 
   const [fontType, setFontType] = useState<'sans' | 'serif'>('sans'); // フォント管理
   const [isEditorOpen, setIsEditorOpen] = useState(false); // モーダル開閉管理
+  const [isEditingTitle, setIsEditingTitle] = useState(false); // タイトル編集状態管理
 
   const graphRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -226,6 +227,33 @@ export default function App() {
       newSeries[index] = { ...newSeries[index], ...updates };
       return { ...prev, series: newSeries };
     });
+  };
+
+  // ★追加: ^数字 を上付き文字に、_数字 を下付き文字に変換する関数
+  const formatText = (text: string) => {
+    if (!text) return '';
+
+    // 変換用マップ
+    const supers: { [key: string]: string } = {
+      '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+      '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+      '+': '⁺', '-': '⁻',
+    };
+    const subs: { [key: string]: string } = {
+      '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+      '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
+      '+': '₊', '-': '₋',
+    };
+
+    return text
+      // ^ の後ろの数字・記号を上付きに変換 (例: m/s^2 -> m/s²)
+      .replace(/\^([0-9+\-]+)/g, (_, match) => {
+        return match.split('').map((c: string) => supers[c] || c).join('');
+      })
+      // _ の後ろの数字・記号を下付きに変換 (例: CO_2 -> CO₂)
+      .replace(/_([0-9+\-]+)/g, (_, match) => {
+        return match.split('').map((c: string) => subs[c] || c).join('');
+      });
   };
 
   // --- Handler: 列追加時に系列を自動追加 ---
@@ -417,14 +445,29 @@ export default function App() {
                 fontFamily: fontType === 'serif' ? '"Noto Serif JP", serif' : '"Noto Sans JP", sans-serif',
               }}
             >
-              {/* グラフタイトル (フォントサイズ適用) */}
-              <input
-                className="text-center w-full mb-4 outline-none hover:bg-gray-50 focus:bg-gray-50 rounded font-bold"
-                style={{ fontSize: config.style.fontSize.title }}
-                value={config.title}
-                onChange={(e) => setConfig({ ...config, title: e.target.value })}
-                placeholder="グラフタイトル"
-              />
+              {/* --- タイトル (編集/表示切り替え) --- */}
+              {isEditingTitle ? (
+                // 編集モード: 生のテキストを表示 (編集しやすくするため)
+                <input
+                  autoFocus
+                  className="text-center w-full mb-4 outline-none bg-gray-50 rounded font-bold border-b border-primary text-gray-900"
+                  style={{ fontSize: config.style.fontSize.title }}
+                  value={config.title}
+                  onChange={(e) => setConfig({ ...config, title: e.target.value })}
+                  onBlur={() => setIsEditingTitle(false)}
+                  onKeyDown={(e) => e.key === 'Enter' && setIsEditingTitle(false)}
+                />
+              ) : (
+                // 表示モード: 整形されたテキストを表示 (クリックで編集へ)
+                <h2
+                  className="text-center w-full mb-4 font-bold hover:bg-gray-50 rounded cursor-text min-h-[1.5em] text-gray-900"
+                  style={{ fontSize: config.style.fontSize.title }}
+                  onClick={() => setIsEditingTitle(true)}
+                  title="クリックしてタイトルを編集"
+                >
+                  {formatText(config.title) || <span className="text-gray-300">タイトルを入力</span>}
+                </h2>
+              )}
 
               <div className="flex-1 w-full min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
@@ -447,15 +490,11 @@ export default function App() {
                       tickMargin={10}
                     >
                       <RechartsLabel
-                        value={`${config.axes.bottom.label} ${config.axes.bottom.unit ? `[${config.axes.bottom.unit}]` : ''}`}
+                        // ★修正: formatText(...) で囲む
+                        value={formatText(`${config.axes.bottom.label} ${config.axes.bottom.unit ? `[${config.axes.bottom.unit}]` : ''}`)}
                         position="insideBottom"
                         offset={0}
-                        style={{
-                          textAnchor: 'middle',
-                          fontSize: config.style.fontSize.axisLabel,
-                          fontWeight: 500,
-                          fill: '#333',
-                        }}
+                        style={{ textAnchor: 'middle', fontSize: config.style.fontSize.axisLabel, fontWeight: 500, fill: '#333' }}
                       />
                     </XAxis>
 
@@ -469,7 +508,7 @@ export default function App() {
                       ]}
                     >
                       <RechartsLabel
-                        value={`${config.axes.left.label} ${config.axes.left.unit ? `[${config.axes.left.unit}]` : ''}`}
+                        value={formatText(`${config.axes.left.label} ${config.axes.left.unit ? `[${config.axes.left.unit}]` : ''}`)}
                         angle={-90}
                         position="insideLeft"
                         style={{
@@ -492,7 +531,7 @@ export default function App() {
                       ]}
                     >
                       <RechartsLabel
-                        value={`${config.axes.right.label} ${config.axes.right.unit ? `[${config.axes.right.unit}]` : ''}`}
+                        value={formatText(`${config.axes.right.label} ${config.axes.right.unit ? `[${config.axes.right.unit}]` : ''}`)}
                         angle={90}
                         position="insideRight"
                         style={{
@@ -504,14 +543,20 @@ export default function App() {
                       />
                     </YAxis>
 
-                    <Tooltip
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    <Tooltip 
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                        // 値の名前(name)と、X軸の値(label)の両方にformatTextを適用
+                        formatter={(value: any, name: any) => [value, formatText(String(name))]}
+                        labelFormatter={(label) => formatText(String(label))}
                     />
-                    <Legend
-                      verticalAlign="top"
-                      height={36}
-                      iconType="circle"
-                      wrapperStyle={{ fontSize: config.style.fontSize.legend }}
+
+                    <Legend 
+                        verticalAlign="top" 
+                        height={36} 
+                        iconType="circle" 
+                        wrapperStyle={{ fontSize: config.style.fontSize.legend }}
+                        // 凡例の項目名にformatTextを適用
+                        formatter={(value) => <span className="text-gray-700 font-medium">{formatText(value)}</span>}
                     />
 
                     {config.series
