@@ -54,7 +54,7 @@
 
 ## 📄 ライセンス
 
-このプロジェクトは [MIT License](https://img.shields.io/badge/license-MIT-blue.svg) の下で公開されています。
+このプロジェクトは [MIT License](https://opensource.org/license/mit) の下で公開されています。
 
 ## 📸 スクリーンショット
 
