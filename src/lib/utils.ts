@@ -11,6 +11,7 @@ export interface SeriesConfig {
   name: string;
   type: 'line' | 'bar';
   lineType?: 'monotone' | 'linear' | 'step'; // 線の曲がり方
+  chartType: 'line' | 'area' | 'scatter' | 'bar';
   yAxisId: 'left' | 'right';
   color: string;
   visible: boolean;

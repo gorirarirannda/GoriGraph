@@ -15,6 +15,7 @@ import Papa from 'papaparse';
 import type React from 'react';
 import { useCallback, useRef, useState } from 'react';
 import {
+  Area,
   Bar,
   CartesianGrid,
   ComposedChart,
@@ -120,6 +121,7 @@ export default function App() {
             visible: true,
             strokeWidth: 2,
             showDot: false,
+            chartType: 'line',
           })),
         }));
       },
@@ -271,6 +273,7 @@ export default function App() {
       name: columnName,
       type: 'line',
       lineType: 'linear',
+      chartType: 'line',
       yAxisId: 'left',
       color: DEFAULT_COLORS[config.series.length % DEFAULT_COLORS.length],
       visible: true,
@@ -562,30 +565,66 @@ export default function App() {
                     {config.series
                       .filter((s) => s.visible)
                       .map((s) => {
-                        if (s.type === 'bar') {
+                        // 共通のプロパティ
+                        const commonProps = {
+                          key: s.id,
+                          name: s.name, // s.id ではなく s.name を使用
+                          dataKey: s.dataKey,
+                          yAxisId: s.yAxisId,
+                          fill: s.color,
+                          stroke: s.color,
+                          isAnimationActive: false, // エクスポート時のズレ防止
+                        };
+
+                        // --- ケース1: 棒グラフ (Bar) ---
+                        if (s.chartType === 'bar') {
                           return (
                             <Bar
-                              key={s.id}
-                              dataKey={s.dataKey}
-                              name={s.name}
-                              yAxisId={s.yAxisId}
-                              fill={s.color}
+                              {...commonProps}
                               barSize={30}
                               radius={[4, 4, 0, 0]}
                             />
                           );
                         }
+
+                        // --- ケース2: 面グラフ (Area) ---
+                        if (s.chartType === 'area') {
+                          return (
+                            <Area
+                              {...commonProps}
+                              type={s.lineType || 'linear'}
+                              fillOpacity={0.3}
+                              strokeWidth={2}
+                              legendType="rect"
+                            />
+                          );
+                        }
+
+                        // --- ケース3: 散布図 (Scatter) ---
+                        // Lineコンポーネントを流用し、線を消して点だけ表示する
+                        if (s.chartType === 'scatter') {
+                          return (
+                            <Line
+                              {...commonProps}
+                              type={s.lineType || 'linear'}
+                              strokeWidth={0} // 線を消す
+                              dot={{ r: 4, strokeWidth: 1, fill: s.color }} // 点を表示
+                              activeDot={{ r: 6 }}
+                              legendType="circle" // 凡例を丸に
+                            />
+                          );
+                        }
+
+                        // --- ケース4: 折れ線 (Line) - デフォルト ---
                         return (
                           <Line
-                            key={s.id}
+                            {...commonProps}
                             type={s.lineType || 'linear'}
-                            dataKey={s.dataKey}
-                            name={s.name}
-                            yAxisId={s.yAxisId}
-                            stroke={s.color}
-                            strokeWidth={s.strokeWidth}
+                            strokeWidth={s.strokeWidth || 2}
+                            // ユーザー設定でドット表示ONなら表示、そうでなければ無し
                             dot={s.showDot ? { r: 4, fill: s.color, strokeWidth: 0 } : false}
                             activeDot={{ r: 6 }}
+                            legendType="line" // 凡例を線に
                           />
                         );
                       })}
@@ -858,12 +897,15 @@ export default function App() {
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
                     <div>
                       <Label>タイプ</Label>
+                      {/* ★修正: chartType を操作するように変更し、選択肢を増やす */}
                       <NativeSelect
-                        value={series.type}
-                        onChange={(e) => updateSeries(idx, { type: e.target.value as any })}
+                        value={series.chartType || 'line'}
+                        onChange={(e) => updateSeries(idx, { chartType: e.target.value as any })}
                       >
                         <option value="line">折れ線 (Line)</option>
+                        <option value="scatter">散布図 (Scatter)</option>
                         <option value="bar">棒グラフ (Bar)</option>
+                        <option value="area">面グラフ (Area)</option>
                       </NativeSelect>
                     </div>
                     <div>
