@@ -32,7 +32,7 @@ import { Button, Card, Input, Label, NativeSelect } from './components/ui/common
 import type { AxisConfig, ChartConfig, SeriesConfig } from './lib/utils';
 
 // --- 初期定数 ---
-const APP_VERSION = 'v1.2.0'; // リリース時に更新してからリリース
+const APP_VERSION = 'v1.3.0'; // リリース時に更新してからリリース
 
 const DEFAULT_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#db2777'];
 
