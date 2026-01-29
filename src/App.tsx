@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import Papa from 'papaparse';
 import type React from 'react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import {
   Area,
   Bar,
@@ -35,6 +35,45 @@ import type { AxisConfig, ChartConfig, SeriesConfig } from './lib/utils';
 const APP_VERSION = 'v1.3.0'; // リリース時に更新してからリリース
 
 const DEFAULT_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#db2777'];
+
+// --- Helper Component: パフォーマンス対策済みカラーピッカー ---
+// ドラッグ中の再レンダリング負荷を軽減するため、内部でstateを持ち、
+// 親への通知は 50ms ほど遅延（デバウンス）させるか、マウスを離した時に行います。
+const DebouncedColorInput = ({ value, onChange }: { value: string, onChange: (val: string) => void }) => {
+  const [localColor, setLocalColor] = useState(value);
+
+  // 外部からvalueが変わった場合（初期化など）に同期
+  useEffect(() => {
+    setLocalColor(value);
+  }, [value]);
+
+  // デバウンス処理用のref
+  const timeoutRef = useRef<number | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVal = e.target.value;
+    setLocalColor(newVal); // 入力欄自体の色は即座に変える（見た目のラグをなくす）
+
+    // 前回のタイマーがあればキャンセル
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // 50ms後に親へ通知（これより速い連打は無視される）
+    timeoutRef.current = window.setTimeout(() => {
+      onChange(newVal);
+    }, 50); 
+  };
+
+  return (
+    <input
+      type="color"
+      value={localColor}
+      onChange={handleChange}
+      className="h-8 w-full cursor-pointer"
+    />
+  );
+};
 
 export default function App() {
   // --- State ---
@@ -921,11 +960,9 @@ export default function App() {
                     <div>
                       <Label>色</Label>
                       <div className="flex items-center gap-2">
-                        <input
-                          type="color"
+                        <DebouncedColorInput
                           value={series.color}
-                          onChange={(e) => updateSeries(idx, { color: e.target.value })}
-                          className="h-8 w-full cursor-pointer"
+                          onChange={(newColor) => updateSeries(idx, { color: newColor })}
                         />
                       </div>
                     </div>
